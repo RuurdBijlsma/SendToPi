@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Renci.SshNet;
 
@@ -26,24 +29,13 @@ namespace SendToPi
                 }
 
                 Console.WriteLine("Connecting to " + connection.Ip + "...");
-                var uploadFile = new FileInfo(args[0]);
-                using (var fileStream = new FileStream(uploadFile.FullName, FileMode.Open))
                 using (var client = new SftpClient(connection.Ip, connection.User, connection.Password))
                 {
                     client.Connect();
-                    Console.WriteLine("Sending " + uploadFile.Name);
-
-                    float completion = 0;
-                    var step = 1f / Console.WindowWidth;
-                    Console.Write("=");
-                    client.UploadFile(fileStream, connection.DestinationPath + uploadFile.Name, progress =>
-                    {
-                        var percentage = (float) progress / uploadFile.Length;
-                        if (percentage - completion < step) return;
-                        completion = percentage;
-                        Console.Write("=");
-                    });
-                    Console.WriteLine();
+                    var line = Console.CursorTop;
+                    var tasks = args.Select(file =>
+                        Task.Run(() => Upload(file, client, connection.DestinationPath, line++)));
+                    Task.WaitAll(tasks.ToArray());
                 }
 
                 Console.WriteLine("Done");
@@ -51,6 +43,45 @@ namespace SendToPi
             catch (Exception e)
             {
                 Console.WriteLine("File upload/transfer Failed.\r\nError Message:\r\n" + e.Message);
+            }
+        }
+
+        private static readonly object LockObject = new object();
+
+        private static void Upload(string file, SftpClient client, string desinationPath, int row)
+        {
+            var uploadFile = new FileInfo(file);
+            using (var fileStream = new FileStream(uploadFile.FullName, FileMode.Open))
+            {
+                var col = 0;
+                var sendMsg = "Sending " + uploadFile.Name + " ";
+
+                float completion = 0;
+                var step = 1f / (Console.WindowWidth - sendMsg.Length);
+
+                lock (LockObject)
+                {
+                    Console.SetCursorPosition(col, row);
+                    Console.Write(sendMsg + "=");
+                }
+                col += sendMsg.Length + 1;
+
+                client.UploadFile(fileStream, desinationPath + uploadFile.Name, progress =>
+                {
+                    var percentage = (float) progress / uploadFile.Length;
+                    if (percentage - completion < step) return;
+                    completion = percentage;
+                    lock (LockObject)
+                    {
+                        Console.SetCursorPosition(col, row);
+                        Console.Write("=");
+                    }
+                    col++;
+                });
+                lock (LockObject)
+                {
+                    Console.WriteLine();
+                }
             }
         }
     }
