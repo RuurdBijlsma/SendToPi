@@ -40,6 +40,7 @@ namespace SendToSftp
                     if (connection.Multithreaded)
                     {
                         var tasks = args.Select(file =>
+                            // ReSharper disable once AccessToDisposedClosure // No problem because all tasks are awaited inside using scope
                             Task.Run(() => Upload(file, client, connection.DestinationPath, line++)));
                         Task.WaitAll(tasks.ToArray());
                         Thread.Sleep(500);
