@@ -1,24 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Renci.SshNet;
 
-namespace SendToPi
+namespace SendToSftp
 {
     internal static class Program
     {
+        private static readonly object LockObject = new object();
+
         private static void Main(string[] args)
         {
             try
             {
-                RaspberryInfo connection;
+                SftpInfo connection;
                 using (var r = new StreamReader("connection.json"))
                 {
                     var json = r.ReadToEnd();
-                    connection = JsonConvert.DeserializeObject<RaspberryInfo>(json);
+                    connection = JsonConvert.DeserializeObject<SftpInfo>(json);
                 }
 
                 if (connection.Ip == null)
@@ -32,21 +34,37 @@ namespace SendToPi
                 using (var client = new SftpClient(connection.Ip, connection.User, connection.Password))
                 {
                     client.Connect();
-                    var line = Console.CursorTop;
-                    var tasks = args.Select(file =>
-                        Task.Run(() => Upload(file, client, connection.DestinationPath, line++)));
-                    Task.WaitAll(tasks.ToArray());
-                }
 
-                Console.WriteLine("Done");
+                    var line = Console.CursorTop;
+                    if (connection.Multithreaded)
+                    {
+                        var tasks = args.Select(file =>
+                            Task.Run(() => Upload(file, client, connection.DestinationPath, line++)));
+                        Task.WaitAll(tasks.ToArray());
+                        Thread.Sleep(500);
+                    }
+                    else
+                    {
+                        foreach (var file in args)
+                            Upload(file, client, connection.DestinationPath, line++);
+                    }
+
+                    lock (LockObject)
+                    {
+                        Console.SetCursorPosition(line + 1, 0);
+                        Console.WriteLine("\n\n\nDone!");
+                    }
+                }
             }
             catch (Exception e)
             {
-                Console.WriteLine("File upload/transfer Failed.\r\nError Message:\r\n" + e.Message);
+                lock (LockObject)
+                {
+                    Console.WriteLine("File upload/transfer Failed.\r\nError Message:\r\n" + e.Message);
+                    Console.ReadKey();
+                }
             }
         }
-
-        private static readonly object LockObject = new object();
 
         private static void Upload(string file, SftpClient client, string desinationPath, int row)
         {
@@ -57,18 +75,34 @@ namespace SendToPi
                 var sendMsg = "Sending " + uploadFile.Name + " ";
 
                 float completion = 0;
-                var step = 1f / (Console.WindowWidth - sendMsg.Length);
+                var consoleWidth = Console.WindowWidth;
+                var step = 1f / (consoleWidth - sendMsg.Length);
 
                 lock (LockObject)
                 {
                     Console.SetCursorPosition(col, row);
-                    Console.Write(sendMsg + "=");
+                    Console.Write(sendMsg);
                 }
-                col += sendMsg.Length + 1;
+
+                col += sendMsg.Length;
 
                 client.UploadFile(fileStream, desinationPath + uploadFile.Name, progress =>
                 {
                     var percentage = (float) progress / uploadFile.Length;
+
+                    if (Math.Abs(percentage - 1) < 0.0001)
+                    {
+                        lock (LockObject)
+                        {
+                            Console.SetCursorPosition(col, row);
+                            for (var i = 0; i < consoleWidth - col; i++)
+                                Console.Write("=");
+                            Console.WriteLine();
+                        }
+
+                        return;
+                    }
+
                     if (percentage - completion < step) return;
                     completion = percentage;
                     lock (LockObject)
@@ -76,12 +110,9 @@ namespace SendToPi
                         Console.SetCursorPosition(col, row);
                         Console.Write("=");
                     }
+
                     col++;
                 });
-                lock (LockObject)
-                {
-                    Console.WriteLine();
-                }
             }
         }
     }

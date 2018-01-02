@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SendToPi", "SendToPi\SendToPi.csproj", "{2627F533-D8B6-4351-B569-6E7406A8B882}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SendToSftp", "SendToSftp\SendToSftp.csproj", "{2627F533-D8B6-4351-B569-6E7406A8B882}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

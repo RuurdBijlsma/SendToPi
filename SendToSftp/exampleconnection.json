@@ -1,0 +1,7 @@
+{
+    "Ip": "192.168.0.141",
+    "User": "pi",
+    "Password": "raspberry",
+    "DestinationPath": "/home/pi/ftp/files/",
+    "Multithreaded": false
+}
