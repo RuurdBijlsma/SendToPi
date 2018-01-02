@@ -30,7 +30,7 @@ namespace SendToSftp
                     return;
                 }
 
-                Console.WriteLine("Connecting to " + connection.Ip + "...");
+                Console.WriteLine("Connecting to " + connection.Ip + "...\n");
                 using (var client = new SftpClient(connection.Ip, connection.User, connection.Password))
                 {
                     client.Connect();
@@ -51,8 +51,8 @@ namespace SendToSftp
 
                     lock (LockObject)
                     {
-                        Console.SetCursorPosition(line + 1, 0);
-                        Console.WriteLine("\n\n\nDone!");
+                        Console.SetCursorPosition(0, line + 1);
+                        Console.WriteLine("Done!");
                     }
                 }
             }
@@ -66,13 +66,15 @@ namespace SendToSftp
             }
         }
 
+        private const string LoadingCharacter = ".";
+
         private static void Upload(string file, SftpClient client, string desinationPath, int row)
         {
             var uploadFile = new FileInfo(file);
             using (var fileStream = new FileStream(uploadFile.FullName, FileMode.Open))
             {
                 var col = 0;
-                var sendMsg = "Sending " + uploadFile.Name + " ";
+                var sendMsg = "Sending " + uploadFile.Name;
 
                 float completion = 0;
                 var consoleWidth = Console.WindowWidth;
@@ -96,7 +98,7 @@ namespace SendToSftp
                         {
                             Console.SetCursorPosition(col, row);
                             for (var i = 0; i < consoleWidth - col; i++)
-                                Console.Write("=");
+                                Console.Write(LoadingCharacter);
                             Console.WriteLine();
                         }
 
@@ -108,7 +110,7 @@ namespace SendToSftp
                     lock (LockObject)
                     {
                         Console.SetCursorPosition(col, row);
-                        Console.Write("=");
+                        Console.Write(LoadingCharacter);
                     }
 
                     col++;
