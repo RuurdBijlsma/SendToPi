@@ -1,4 +1,5 @@
 ﻿// ReSharper disable UnassignedField.Global
+
 namespace SendToSftp
 {
     public struct SftpInfo

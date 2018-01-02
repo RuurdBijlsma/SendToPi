@@ -10,6 +10,7 @@ namespace SendToSftp
 {
     internal static class Program
     {
+        private const string LoadingCharacter = ".";
         private static readonly object LockObject = new object();
 
         private static void Main(string[] args)
@@ -65,8 +66,6 @@ namespace SendToSftp
                 }
             }
         }
-
-        private const string LoadingCharacter = ".";
 
         private static void Upload(string file, SftpClient client, string desinationPath, int row)
         {
