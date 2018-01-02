@@ -38,8 +38,8 @@ namespace SendToPi
                     Console.Write("=");
                     client.UploadFile(fileStream, connection.DestinationPath + uploadFile.Name, progress =>
                     {
-                        var percentage = (float) (progress) / uploadFile.Length;
-                        if (!(percentage - completion > step)) return;
+                        var percentage = (float) progress / uploadFile.Length;
+                        if (percentage - completion < step) return;
                         completion = percentage;
                         Console.Write("=");
                     });
